@@ -1,0 +1,9 @@
+- op: replace
+  path: /spec/tls/0/hosts/0
+  value: dev.short.eliasmorio.fr
+- op: replace
+  path: /spec/tls/0/secretName
+  value: url-shortener-tls-dev
+- op: replace
+  path: /spec/rules/0/host
+  value: dev.short.eliasmorio.fr

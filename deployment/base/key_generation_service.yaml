@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: key-generation-service
+  labels:
+    app: key-generation-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: key-generation-service
+  template:
+    metadata:
+      labels:
+        app: key-generation-service
+    spec:
+      containers:
+        - name: url-shortener-kgs
+          image: registry.gitlab.com/eliasmorio/urlshortener/key_generation_service
+          ports:
+            - containerPort: 8081
+
+
+      imagePullSecrets:
+        - name: gitlab-registry-credentials
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: key-generation-service
+spec:
+  selector:
+    app: key-generation-service
+  ports:
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081

@@ -1,0 +1,102 @@
+# Public Web Api Deployment, etc.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-api
+  labels:
+    app: web-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web-api
+  template:
+    metadata:
+      labels:
+        app: web-api
+    spec:
+      containers:
+        - name: url-shortener-web-api
+          image: registry.gitlab.com/eliasmorio/urlshortener/web_server_api
+          ports:
+          - containerPort: 8080
+          env:
+            - name: KGS_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: url
+                  name: kgs-config
+            - name: MONGO_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: url
+                  name: mongodb-config
+            - name: MONGO_DB
+              valueFrom:
+                configMapKeyRef:
+                  key: database
+                  name: mongodb-config
+            - name: MONGO_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb
+                  key: username
+            - name: MONGO_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb
+                  key: password
+            - name: REDIS_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: url
+                  name: redis-config
+            - name: REDIS_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: redis
+            - name: REDIS_DB
+              valueFrom:
+                configMapKeyRef:
+                  key: db
+                  name: redis-config
+      imagePullSecrets:
+        - name: gitlab-registry-credentials
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-api
+spec:
+  selector:
+    app: web-api
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web-api
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: lets-encrypt
+spec:
+  ingressClassName: public
+  tls:
+    - hosts:
+      - short.eliasmorio.fr
+      secretName: url-shortener-tls
+  rules:
+  - host: short.eliasmorio.fr
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: web-api
+            port:
+              number: 8080

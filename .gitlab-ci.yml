@@ -1,0 +1,106 @@
+# This file is a template, and might need editing before it works on your project.
+# You can copy and paste this template into a new `.gitlab-ci.yml` file.
+# You should not add this template to an existing `.gitlab-ci.yml` file by using the `include:` keyword.
+#
+# To contribute improvements to CI/CD templates, please follow the Development guide at:
+# https://docs.gitlab.com/ee/development/cicd/templates.html
+# This specific template is located at:
+# https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Go.gitlab-ci.yml
+
+variables:
+  KUBE_CONTEXT: eliasmorio/k8s-connections:microk8s
+
+stages:
+  - format/test
+  - build
+  - deploy
+
+go-format:
+  stage: format/test
+  image: golang:1.21
+  script:
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - go vet $(go list ./... | grep -v /vendor/)
+#    - go test -race $(go list ./... | grep -v /vendor/)
+
+go-test:
+  stage: format/test
+  image: golang:1.21
+  script:
+    - go test ./... -coverprofile=coverage.out -covermode=atomic
+  artifacts:
+    paths:
+      - coverage.out
+
+sonarqube-check:
+  stage: format/test
+  needs:
+    - job: go-test
+      artifacts: true
+  image:
+    name: sonarsource/sonar-scanner-cli:5.0
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"  # Defines the location of the analysis task cache
+    GIT_DEPTH: "0"  # Tells git to fetch all the branches of the project, required by the analysis task
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script:
+    - sonar-scanner
+  allow_failure: true
+  only:
+    - merge_requests
+    - main
+
+
+build:
+  stage: build
+  needs: ["go-format", "go-test"]
+  image: docker:latest
+  before_script:
+    - apk add --no-cache --upgrade bash
+  services:
+    - docker:dind
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - ./scripts/build-and-push-images.sh
+    - docker logout $CI_REGISTRY
+  only:
+    - main
+
+deploy-staging:
+  stage: deploy
+  needs:
+    - build
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  environment:
+    name: staging
+    url: https://dev.short.eliasmorio.fr
+  script:
+    - kubectl config use-context $KUBE_CONTEXT
+    - kubectl apply -k deployment/overlays/staging
+  only:
+    - main
+
+# manual deploy to production
+deploy-production:
+  needs:
+    - build
+    - deploy-staging
+  stage: deploy
+  environment:
+    name: production
+    url: https://short.eliasmorio.fr
+  image:
+    name: bitnami/kubectl:latest
+    entrypoint: [""]
+  script:
+    - kubectl config use-context $KUBE_CONTEXT
+    - kubectl apply -k deployment/overlays/production
+  when: manual
+  only:
+    - main

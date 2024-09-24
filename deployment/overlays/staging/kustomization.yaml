@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
+
+nameSuffix: -staging
+namespace: url-shortener-staging
+
+configMapGenerator:
+  - name: mongodb-config
+    literals:
+      - url=mongodb://mongodb-staging:27017
+      - database=UrlShortener
+  - name: redis-config
+    literals:
+      - url=redis-cluster-staging:6379
+      - db=0
+  - name: kgs-config
+    literals:
+      - url=key-generation-service-staging:8081
+secretGenerator:
+  - name: mongodb
+    literals:
+      - username=root
+      - password=root
+  - name: redis
+    literals:
+      - password=root
+
+patches:
+  - path: web_api/ingress_host.yaml
+    target:
+      group: networking.k8s.io
+      version: v1
+      kind: Ingress
+      name: web-api

@@ -1,0 +1,1 @@
+[![Quality Gate Status](https://sonar.eliasmorio.fr/api/project_badges/measure?project=eliasmorio_urlshortener_AY1bGT3ByVUBeZsuRk57&metric=alert_status&token=sqb_26588dea4ed0172dcb5c63ec7d60c4d509e7c5c8)](https://sonar.eliasmorio.fr/dashboard?id=eliasmorio_urlshortener_AY1bGT3ByVUBeZsuRk57)

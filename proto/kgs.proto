@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option go_package="internal/proto/protogen";
+
+service Kgs {
+  rpc GenKey (KeyRequest) returns (KeyResponse) {}
+}
+
+message KeyRequest {
+  string url = 1;
+}
+
+message KeyResponse {
+  string key = 1;
+}
+
+

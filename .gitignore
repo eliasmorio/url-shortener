@@ -1,0 +1,10 @@
+# IDE
+.idea
+.vscode
+
+# secrets
+.env
+
+# build output
+out
+bin
